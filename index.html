@@ -581,7 +581,7 @@
         { x: 30, y: 40, stores: [ { name: '상생 온누리 카페', cat: '외식/카페 | 상생 골목형상점가', addr: '광주광역시 서구 농성동 415', dist: '150m', tel: '062-123-4567', isFav: true } ] },
         { x: 75, y: 25, stores: [ { name: '우리동네 나들가게', cat: '슈퍼/편의점 | 일반매장', addr: '광주광역시 서구 상무1동 45-2', dist: '90m', tel: '062-111-2222', isFav: false } ] },
         { x: 40, y: 60, stores: [ { name: '싱싱 동네정육점', cat: '식육/축산물 | 상생 골목형상점가', addr: '광주광역시 서구 풍암동 1121', dist: '320m', tel: '062-234-5678', isFav: true } ] },
-        { x: 60, y: 35, stores: [ { name: '별빛 로스터리', cat: '외식/카페 | 일반매장', addr: '광주광역시 서구 금호동 123-1', dist: '110m', tel: '062-222-3333', isFav: false }, { name: '달콤 과일가게', cat: '과일/청과 | 상생 골목형상점가', addr: '광주광역시 서구 치평동 1182', dist: '110m', tel: '062-999-0000', isFav: true }, { name: '향긋 커피콩', 시: '외식/카페 | 일반매장', addr: '광주광역시 서구 치평동 456', dist: '200m', tel: '062-333-1111', isFav: false } ] },
+        { x: 60, y: 35, stores: [ { name: '별빛 로스터리', cat: '외식/카페 | 일반매장', addr: '광주광역시 서구 금호동 123-1', dist: '110m', tel: '062-222-3333', isFav: false }, { name: '달콤 과일가게', cat: '과일/청과 | 상생 골목형상점가', addr: '광주광역시 서구 치평동 1182', dist: '110m', tel: '062-999-0000', isFav: true }, { name: '향긋 커피콩', cat: '외식/카페 | 일반매장', addr: '광주광역시 서구 치평동 456', dist: '200m', tel: '062-333-1111', isFav: false } ] },
         { x: 20, y: 20, stores: [ { name: '향기솔솔 꽃집', cat: '화훼/식물 | 상생 골목형상점가', addr: '광주광역시 서구 상무1동 892', dist: '450m', tel: '062-777-8888', isFav: true } ] },
         { x: 65, y: 85, stores: [ { name: '뽀송 세탁소', cat: '세탁/수선 | 상생 골목형상점가', addr: '광주광역시 서구 양동 31', dist: '900m', tel: '062-111-3333', isFav: true } ] },
         { x: 85, y: 15, stores: [ { name: '멋쟁이 미용실', cat: '이용/미용 | 상생 골목형상점가', addr: '광주광역시 서구 유촌동 152', dist: '1.2km', tel: '062-222-5555', isFav: true }, { name: '튼튼 약국', cat: '약국/의료기기 | 상생 골목형상점가', addr: '광주광역시 서구 농성2동 44', dist: '1.2km', tel: '062-333-7777', isFav: true } ] },
@@ -742,20 +742,20 @@
         document.getElementById('map-view-around').classList.add('hidden');
         document.getElementById('map-view-favorite').classList.add('hidden');
         
-        document.getElementById('map-tab-1').className = "w-1/3 pb-2 cursor-pointer text-gray-400 text-xs font-bold";
-        document.getElementById('map-tab-2').className = "w-1/3 pb-2 cursor-pointer text-gray-400 text-xs font-bold";
-        document.getElementById('map-tab-3').className = "w-1/3 pb-2 cursor-pointer text-gray-400 text-xs font-bold";
+        document.getElementById('map-tab-1').className = "w-1/3 pb-2 cursor-pointer text-gray-400";
+        document.getElementById('map-tab-2').className = "w-1/3 pb-2 cursor-pointer text-gray-400";
+        document.getElementById('map-tab-3').className = "w-1/3 pb-2 cursor-pointer text-gray-400";
         
         if(type === 'search') {
             document.getElementById('map-view-search').classList.remove('hidden');
-            document.getElementById('map-tab-1').className = "w-1/3 pb-2 cursor-pointer border-b-2 border-blue-600 text-blue-600 text-xs font-bold";
+            document.getElementById('map-tab-1').className = "w-1/3 pb-2 cursor-pointer border-b-2 border-blue-600 text-blue-600";
         } else if (type === 'around') {
             document.getElementById('map-view-around').classList.remove('hidden');
-            document.getElementById('map-tab-2').className = "w-1/3 pb-2 cursor-pointer border-b-2 border-blue-600 text-blue-600 text-xs font-bold";
+            document.getElementById('map-tab-2').className = "w-1/3 pb-2 cursor-pointer border-b-2 border-blue-600 text-blue-600";
             renderMapMarkers();
         } else if (type === 'favorite') {
             document.getElementById('map-view-favorite').classList.remove('hidden');
-            document.getElementById('map-tab-3').className = "w-1/3 pb-2 cursor-pointer border-b-2 border-blue-600 text-blue-600 text-xs font-bold";
+            document.getElementById('map-tab-3').className = "w-1/3 pb-2 cursor-pointer border-b-2 border-blue-600 text-blue-600";
         }
     }
 
@@ -948,8 +948,8 @@
 
     function updateBadge() { const badge = document.getElementById('msg-badge'); if(user.unreadMsg > 0) { badge.innerText = user.unreadMsg; badge.style.display = 'flex'; } else { badge.style.display = 'none'; } }
     
-    // 처음에 3초 보여주고 자연스럽게 넘어가도록 하는 코드
-    document.addEventListener('DOMContentLoaded', function() { 
+    // 안전하게 초기화 함수 실행 (어떤 환경이든 무조건 실행되도록)
+    function initApp() {
         updateBadge(); 
         renderMapMarkers(); 
 
@@ -961,8 +961,14 @@
                     splash.classList.add('hidden'); // 완전히 숨김 처리
                 }, 500);
             }
-        }, 3000); // 3000ms = 3초
-    });
+        }, 2000); // 2000ms = 2초
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+        initApp();
+    }
 </script>
 </body>
 </html>
