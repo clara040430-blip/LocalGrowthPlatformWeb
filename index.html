@@ -111,6 +111,46 @@
             border-color: #FFD700 !important;
             color: #FFFFFF !important;
         }
+
+        /* 가입 주소 화면: 작은 휴대폰에서도 주소칸과 자격 확인 버튼이 보이도록 배치 */
+        #view-intro {
+            height: 100%;
+            min-height: 0;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+        }
+        #view-intro > .map-bg-fallback {
+            height: auto !important;
+            min-height: 90px;
+            flex: 1 1 auto;
+        }
+        #view-intro > .signup-form-panel {
+            box-sizing: border-box;
+            flex: 0 0 auto;
+            width: 100%;
+            padding: 16px 20px calc(18px + env(safe-area-inset-bottom, 0px));
+            background: #f9fafb;
+        }
+        #btn-check-eligibility {
+            box-sizing: border-box;
+            display: block;
+            visibility: visible;
+            width: 100%;
+            min-height: 52px;
+            margin-top: 14px;
+            flex-shrink: 0;
+            touch-action: manipulation;
+        }
+        #view-intro #map-wrapper { transition-duration: 0.8s !important; }
+        @media (max-height: 620px) {
+            #view-intro > .map-bg-fallback { min-height: 70px; }
+            #view-intro > .signup-form-panel { padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)); }
+            #view-intro > .signup-form-panel h2 { font-size: 20px; margin-bottom: 4px; }
+            #view-intro > .signup-form-panel > p { margin-bottom: 8px; }
+            #btn-check-eligibility { margin-top: 8px; min-height: 48px; }
+        }
     </style>
 </head>
 <body>
@@ -138,7 +178,7 @@
             </div>
         </div>
 
-        <div id="view-intro" class="fade-in hidden flex-col h-full bg-gray-50 overflow-y-auto pb-10">
+        <div id="view-intro" class="fade-in hidden flex-col h-full bg-gray-50 overflow-y-auto">
             <div class="relative w-full h-[450px] sm:h-[550px] flex-shrink-0 map-bg-fallback overflow-hidden border-b-4 border-blue-600 shadow-inner">
                 <div id="map-wrapper" class="w-full h-full transition-transform ease-in-out" style="transition-duration: 5s;">
                     <img id="gwangju-map" src="./map.png" alt="지도" onerror="this.style.display='none';">
@@ -146,14 +186,14 @@
                 <div id="map-focus" class="absolute top-1/2 left-1/2 w-20 h-20 bg-blue-500/30 border-blue-600 rounded-full map-focus-ring hidden"></div>
                 <div id="map-pin" class="absolute top-1/2 left-1/2 w-5 h-5 bg-red-600 border-2 border-white rounded-full shadow-lg transform -translate-x-1/2 -translate-y-1/2 hidden z-10"></div>
             </div>
-            <div class="p-6 flex flex-col bg-gray-50 flex-shrink-0 relative z-20">
+            <div class="signup-form-panel p-6 flex flex-col bg-gray-50 flex-shrink-0 relative z-20">
                 <h2 class="text-2xl font-black text-gray-800 mb-2">어디에 거주하시나요?</h2>
                 <p class="text-sm text-gray-500 mb-4">거주 주소를 기반으로 가입 자격이 매칭됩니다.</p>
                 <div class="relative mt-2 z-30">
-                    <input type="text" id="signup-address" placeholder="동 이름 또는 주소 입력 (예: 금호, 금호동)" autocomplete="off" oninput="previewAddressDong()" oncompositionend="previewAddressDong()" onkeydown="if(event.key==='Enter'){event.preventDefault();checkEligibilityManual();}" class="w-full p-4 bg-white border border-gray-300 rounded-xl outline-none text-sm font-bold shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition pr-10 relative z-10">
+                    <input type="text" id="signup-address" placeholder="동 이름 또는 주소 입력 (예: 농성동)" autocomplete="off" oninput="previewAddressDong()" oncompositionend="previewAddressDong()" onkeydown="if(event.key==='Enter' && !event.isComposing && event.keyCode!==229){event.preventDefault();checkEligibilityManual();}" class="w-full p-4 bg-white border border-gray-300 rounded-xl outline-none text-sm font-bold shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition pr-10 relative z-10">
                     <span class="material-symbols-outlined absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 font-black pointer-events-none z-20">edit</span>
                 </div>
-                <p id="address-match-hint" role="status" aria-live="polite" class="mt-2 text-xs text-gray-500 font-bold">'금호'처럼 동 이름의 일부만 입력해도 인식됩니다.</p>
+                <p id="address-match-hint" role="status" aria-live="polite" class="mt-2 text-xs text-gray-500 font-bold">'농성'처럼 동 이름의 일부만 입력해도 인식됩니다.</p>
                 <button id="btn-check-eligibility" onclick="checkEligibilityManual()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl text-lg shadow-md mt-6 active:scale-95 transition relative z-30 cursor-pointer">자격 확인하기</button>
             </div>
         </div>
@@ -314,7 +354,7 @@
 
                 <div id="map-view-search" class="p-5 flex-1 bg-white">
                     <div class="flex space-x-2 mb-4"><span class="px-4 py-1.5 bg-blue-600 text-white rounded-full text-xs font-bold shadow-sm">가맹점</span><span class="px-4 py-1.5 border border-gray-300 text-gray-500 rounded-full text-xs font-bold shadow-sm">시장</span></div>
-                    <input type="text" id="store-search-input" placeholder="가맹점명 또는 동 이름 (예: 금호)" oninput="searchStores()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchStores();}" class="w-full border border-gray-300 p-3 rounded-lg bg-white mb-3 text-sm focus:border-blue-600 outline-none transition">
+                    <input type="text" id="store-search-input" placeholder="가맹점명 또는 동 이름 (예: 농성동)" oninput="searchStores()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchStores();}" class="w-full border border-gray-300 p-3 rounded-lg bg-white mb-3 text-sm focus:border-blue-600 outline-none transition">
                     <button onclick="searchStores()" class="w-full bg-blue-50 text-blue-600 border border-blue-200 py-3 rounded-xl font-bold flex justify-center items-center active:scale-95 transition"><span class="material-symbols-outlined mr-1 text-lg font-black">search</span> 조회</button>
                     <div id="store-search-results" class="mt-4 space-y-2" aria-live="polite"></div>
                 </div>
@@ -662,7 +702,7 @@
             hint.className = 'mt-2 text-xs text-blue-600 font-bold';
             if (dong !== lastPreviewDong) focusMapByDongName(dong);
         } else {
-            hint.textContent = input.value.trim() ? '서구의 동 이름을 확인해 주세요. 예: 금호, 화정, 농성' : "'금호'처럼 동 이름의 일부만 입력해도 인식됩니다.";
+            hint.textContent = input.value.trim() ? '서구의 동 이름을 확인해 주세요. 예: 농성동, 화정동, 금호동' : "'농성'처럼 동 이름의 일부만 입력해도 인식됩니다.";
             hint.className = 'mt-2 text-xs text-gray-500 font-bold';
             if (lastPreviewDong) {
                 document.getElementById('map-wrapper').style.transform = '';
@@ -695,7 +735,7 @@
         const matchedDong = matchDongFromInput(addrInput);
         if(!matchedDong) {
             previewAddressDong();
-            return alert("입력하신 주소에서 서구의 동 이름을 찾지 못했습니다. 예: 금호, 화정동, 농성동");
+            return alert("입력하신 주소에서 서구의 동 이름을 찾지 못했습니다. 예: 농성동, 화정동, 금호동");
         }
         
         document.getElementById('signup-address').blur(); // 키보드 내림
@@ -704,14 +744,8 @@
         user.matchedDong = matchedDong;
         focusMapByDongName(matchedDong);
 
-        const btn = document.getElementById('btn-check-eligibility');
-        btn.innerText = "상권 매칭 중..."; btn.disabled = true;
-
-        // 줌인 5초 + 정지 상태 1초 = 총 6초 뒤에 다음 화면으로 이동
-        setTimeout(() => {
-            btn.innerText = "자격 확인하기"; btn.disabled = false;
-            checkEligibilityAuto(addrInput, matchedDong);
-        }, 6000);
+        // 입력 중 지도로 위치를 표시하며, 자격 확인 버튼을 누르면 즉시 다음 단계로 이동합니다.
+        checkEligibilityAuto(addrInput, matchedDong);
     }
 
     function checkEligibilityAuto(addrInput, matchedDong) {
