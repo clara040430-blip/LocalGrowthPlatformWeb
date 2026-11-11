@@ -150,9 +150,10 @@
                 <h2 class="text-2xl font-black text-gray-800 mb-2">어디에 거주하시나요?</h2>
                 <p class="text-sm text-gray-500 mb-4">거주 주소를 기반으로 가입 자격이 매칭됩니다.</p>
                 <div class="relative mt-2 z-30">
-                    <input type="text" id="signup-address" placeholder="주소 입력 (예: 광주광역시 서구 경열로 33)" class="w-full p-4 bg-white border border-gray-300 rounded-xl outline-none text-sm font-bold shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition pr-10 relative z-10">
+                    <input type="text" id="signup-address" placeholder="동 이름 또는 주소 입력 (예: 금호, 금호동)" autocomplete="off" oninput="previewAddressDong()" oncompositionend="previewAddressDong()" onkeydown="if(event.key==='Enter'){event.preventDefault();checkEligibilityManual();}" class="w-full p-4 bg-white border border-gray-300 rounded-xl outline-none text-sm font-bold shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition pr-10 relative z-10">
                     <span class="material-symbols-outlined absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 font-black pointer-events-none z-20">edit</span>
                 </div>
+                <p id="address-match-hint" role="status" aria-live="polite" class="mt-2 text-xs text-gray-500 font-bold">'금호'처럼 동 이름의 일부만 입력해도 인식됩니다.</p>
                 <button id="btn-check-eligibility" onclick="checkEligibilityManual()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl text-lg shadow-md mt-6 active:scale-95 transition relative z-30 cursor-pointer">자격 확인하기</button>
             </div>
         </div>
@@ -313,8 +314,9 @@
 
                 <div id="map-view-search" class="p-5 flex-1 bg-white">
                     <div class="flex space-x-2 mb-4"><span class="px-4 py-1.5 bg-blue-600 text-white rounded-full text-xs font-bold shadow-sm">가맹점</span><span class="px-4 py-1.5 border border-gray-300 text-gray-500 rounded-full text-xs font-bold shadow-sm">시장</span></div>
-                    <input type="text" placeholder="가맹점명을 입력하세요." class="w-full border border-gray-300 p-3 rounded-lg bg-white mb-3 text-sm focus:border-blue-600 outline-none transition">
-                    <button class="w-full bg-blue-50 text-blue-600 border border-blue-200 py-3 rounded-xl font-bold flex justify-center items-center active:scale-95 transition"><span class="material-symbols-outlined mr-1 text-lg font-black">search</span> 조회</button>
+                    <input type="text" id="store-search-input" placeholder="가맹점명 또는 동 이름 (예: 금호)" oninput="searchStores()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchStores();}" class="w-full border border-gray-300 p-3 rounded-lg bg-white mb-3 text-sm focus:border-blue-600 outline-none transition">
+                    <button onclick="searchStores()" class="w-full bg-blue-50 text-blue-600 border border-blue-200 py-3 rounded-xl font-bold flex justify-center items-center active:scale-95 transition"><span class="material-symbols-outlined mr-1 text-lg font-black">search</span> 조회</button>
+                    <div id="store-search-results" class="mt-4 space-y-2" aria-live="polite"></div>
                 </div>
 
                 <div id="map-view-around" class="hidden w-full h-[65vh] relative map-bg-fallback overflow-hidden mt-2 border-t border-gray-200">
@@ -496,7 +498,7 @@
                     <div><p class="text-xs text-gray-400 mb-1 font-bold">영업 시간</p><input type="text" value="매일 09:00 - 22:00" class="w-full border-b border-gray-200 py-1 text-sm font-bold text-gray-800 outline-none"></div>
                     <div><p class="text-xs text-gray-400 mb-1 font-bold">전화번호</p><input type="text" value="062-123-4567" class="w-full border-b border-gray-200 py-1 text-sm font-bold text-gray-800 outline-none"></div>
                     <div><p class="text-xs text-gray-400 mb-1 font-bold">매장 주소</p><input type="text" value="광주광역시 서구 농성동 415, 1층" class="w-full border-b border-gray-200 py-1 text-sm font-bold text-gray-800 outline-none"></div>
-                    <button class="w-full mt-4 bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-sm transition active:scale-95">정보 수정하기</button>
+                    <button onclick="saveBossInfo()" class="w-full mt-4 bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-sm transition active:scale-95">정보 수정하기</button>
                 </div>
             </div>
 
@@ -546,7 +548,7 @@
         <div class="bottom-nav hidden" id="nav-boss">
             <button class="nav-btn active" id="nav-home-boss" onclick="switchNavBoss('boss-home', this)"><span class="material-symbols-outlined">storefront</span><span class="text-[10px] mt-1 font-bold">매장홈</span></button>
             <button class="nav-btn" id="nav-sales-boss" onclick="switchNavBoss('boss-sales', this)"><span class="material-symbols-outlined">payments</span><span class="text-[10px] mt-1 font-bold">매출내역</span></button>
-            <div class="nav-qr-btn" onclick="switchNavBoss('boss-msg', document.getElementById('nav-msg-boss'))"><div class="qr-circle bg-indigo-600 border-indigo-200"><span class="material-symbols-outlined">campaign</span></div><span class="text-[11px] font-bold text-indigo-600 mt-1">단골알림</span></div>
+            <div class="nav-qr-btn" id="nav-msg-boss" onclick="switchNavBoss('boss-msg', this)"><div class="qr-circle bg-indigo-600 border-indigo-200"><span class="material-symbols-outlined">campaign</span></div><span class="text-[11px] font-bold text-indigo-600 mt-1">단골알림</span></div>
             <button class="nav-btn" id="nav-settle-boss" onclick="switchNavBoss('boss-settle', this)"><span class="material-symbols-outlined">receipt_long</span><span class="text-[10px] mt-1 font-bold">정산내역</span></button>
             <button class="nav-btn" id="nav-manage-boss" onclick="switchNavBoss('boss-manage', this)"><span class="material-symbols-outlined">settings</span><span class="text-[10px] mt-1 font-bold">상점관리</span></button>
         </div>
@@ -633,7 +635,44 @@
         intro.classList.add('flex');
     };
     
-    window.startQRSignup = function() { alert("📷 매장 QR 스캔 기능은 연동 준비 중입니다."); };
+    window.startQRSignup = function() {
+        alert("QR 카메라 연동 전 시연 버전입니다. 주소 입력 단계로 이동합니다.");
+        window.startAppSignup();
+    };
+
+    // 주소 일부 입력도 인식. 실제 주소 DB/API 확인이 아닌 데모용 동 이름 매칭입니다.
+    const areaAliases = [
+        ['광천동',['광천']], ['금호동',['금호']], ['치평동',['상무','치평','쌍촌']],
+        ['풍암동',['풍암']], ['화정동',['화정']], ['농성동',['농성','경열']],
+        ['양동',['양동']], ['유촌동',['유촌','버들']], ['마륵동',['마륵']], ['매월동',['매월']]
+    ];
+    let lastPreviewDong = '';
+    function matchDongFromInput(raw) {
+        const value = String(raw || '').replace(/\s+/g, '').trim();
+        if (!value) return null;
+        const group = areaAliases.find(([, aliases]) => aliases.some(alias => value.includes(alias)));
+        return group ? group[0] : null;
+    }
+    function previewAddressDong() {
+        const input = document.getElementById('signup-address');
+        const hint = document.getElementById('address-match-hint');
+        const dong = matchDongFromInput(input.value);
+        if (dong) {
+            hint.textContent = '✓ ' + dong + ' 인식 완료 · 자격 확인하기를 누르세요.';
+            hint.className = 'mt-2 text-xs text-blue-600 font-bold';
+            if (dong !== lastPreviewDong) focusMapByDongName(dong);
+        } else {
+            hint.textContent = input.value.trim() ? '서구의 동 이름을 확인해 주세요. 예: 금호, 화정, 농성' : "'금호'처럼 동 이름의 일부만 입력해도 인식됩니다.";
+            hint.className = 'mt-2 text-xs text-gray-500 font-bold';
+            if (lastPreviewDong) {
+                document.getElementById('map-wrapper').style.transform = '';
+                document.getElementById('map-focus').classList.add('hidden');
+                document.getElementById('map-pin').classList.add('hidden');
+            }
+        }
+        lastPreviewDong = dong || '';
+        return dong;
+    }
 
     // 지도 포커스 수학적 계산 적용 (정중앙 이동)
     function focusMapByDongName(dong) {
@@ -651,23 +690,16 @@
     }
 
     function checkEligibilityManual() {
-        const addrInput = document.getElementById('signup-address').value;
+        const addrInput = document.getElementById('signup-address').value.trim();
         if(!addrInput) return alert("거주 주소를 입력해 주세요.");
+        const matchedDong = matchDongFromInput(addrInput);
+        if(!matchedDong) {
+            previewAddressDong();
+            return alert("입력하신 주소에서 서구의 동 이름을 찾지 못했습니다. 예: 금호, 화정동, 농성동");
+        }
         
         document.getElementById('signup-address').blur(); // 키보드 내림
         window.scrollTo(0, 0); // 화면 밀림 굳음 방지
-
-        let matchedDong = "광천동";
-        if(addrInput.includes("광천")) matchedDong = "광천동";
-        else if(addrInput.includes("금호")) matchedDong = "금호동";
-        else if(addrInput.includes("상무") || addrInput.includes("치평") || addrInput.includes("쌍촌")) matchedDong = "치평동";
-        else if(addrInput.includes("풍암")) matchedDong = "풍암동";
-        else if(addrInput.includes("화정")) matchedDong = "화정동";
-        else if(addrInput.includes("농성") || addrInput.includes("경열")) matchedDong = "농성동";
-        else if(addrInput.includes("양동")) matchedDong = "양동";
-        else if(addrInput.includes("유촌") || addrInput.includes("버들")) matchedDong = "유촌동";
-        else if(addrInput.includes("마륵")) matchedDong = "마륵동";
-        else if(addrInput.includes("매월")) matchedDong = "매월동";
 
         user.matchedDong = matchedDong;
         focusMapByDongName(matchedDong);
@@ -794,6 +826,42 @@
         }
     }
 
+    // 직접 검색 기능: 시연 데이터에서 매장명·업종·동을 찾고 지도 상세로 연결
+    function searchStores() {
+        const input = document.getElementById('store-search-input');
+        const results = document.getElementById('store-search-results');
+        const q = input.value.replace(/\s+/g, '').toLowerCase();
+        results.replaceChildren();
+        if (!q) {
+            results.textContent = '가맹점 이름이나 동 이름을 입력해 주세요.';
+            results.className = 'mt-4 space-y-2 text-xs text-gray-500';
+            return;
+        }
+        results.className = 'mt-4 space-y-2';
+        const hits = [];
+        mapLocations.forEach((loc,index) => loc.stores.forEach(store => {
+            if ([store.name,store.cat,store.addr].some(s => s.replace(/\s+/g,'').toLowerCase().includes(q))) hits.push({index,store});
+        }));
+        if (!hits.length) {
+            results.textContent = '일치하는 가맹점이 없습니다.';
+            return;
+        }
+        hits.forEach(({index,store}) => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'block w-full bg-white p-3 border border-gray-200 rounded-xl text-left active:scale-95';
+            const name = document.createElement('p');
+            name.className = 'font-bold text-sm text-gray-800';
+            name.textContent = store.name;
+            const addr = document.createElement('p');
+            addr.className = 'text-xs text-gray-500 mt-1';
+            addr.textContent = store.addr;
+            item.append(name,addr);
+            item.onclick = () => { switchInnerMapTab('around'); showStoreInfo(index); };
+            results.appendChild(item);
+        });
+    }
+
     function renderMapMarkers() {
         const container = document.getElementById('map-markers-container');
         if(!container) return;
@@ -870,6 +938,7 @@
     function startCameraScan() {
         const amount = parseInt(document.getElementById('amount').value);
         if (!amount || amount <= 0) return alert("결제 금액을 정확히 입력해 주세요.");
+        if (!isStoreOpen) return alert("매장 영업 종료 상태입니다. 상인모드에서 영업 상태를 확인해 주세요.");
         
         document.getElementById('amount').blur(); // 키보드 내림
         window.scrollTo(0, 0); // 화면 밀림 방지
@@ -905,6 +974,21 @@
 
     function openNotificationTab() { document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden')); document.getElementById('tab-notifications').classList.remove('hidden'); document.getElementById('top-bell-badge').classList.add('hidden'); if (currentRole === 'customer') { document.getElementById('notif-list-customer').classList.remove('hidden'); document.getElementById('notif-list-boss').classList.add('hidden'); } else { document.getElementById('notif-list-customer').classList.add('hidden'); document.getElementById('notif-list-boss').classList.remove('hidden'); } }
     function closeNotificationTab() { document.getElementById('tab-notifications').classList.add('hidden'); document.getElementById('tab-' + previousTab).classList.remove('hidden'); }
+    function saveBossInfo() {
+        const inputs = [...document.querySelectorAll('#tab-boss-manage input:not([readonly])')];
+        if (inputs.some(el => !el.value.trim())) return alert('업종·영업시간·전화번호·주소를 모두 입력해 주세요.');
+        const values = inputs.map(el => el.value.trim());
+        try { localStorage.setItem('localgrowth_demo_boss_info', JSON.stringify(values)); }
+        catch (e) { /* 차단된 브라우저에서도 현재 화면은 수정된 값을 유지합니다. */ }
+        alert('상점 정보가 이 브라우저에 저장되었습니다.');
+    }
+    function loadBossInfo() {
+        try {
+            const values = JSON.parse(localStorage.getItem('localgrowth_demo_boss_info') || 'null');
+            const inputs = [...document.querySelectorAll('#tab-boss-manage input:not([readonly])')];
+            if (Array.isArray(values) && values.length===inputs.length) inputs.forEach((el,i)=>{el.value=values[i]});
+        } catch (e) { /* 저장 내역이 없는 환경은 초기 시연 데이터 유지 */ }
+    }
     function togglePrivacyMode() { isPrivacyMode = document.getElementById('privacy-mode-toggle').checked; const storeToggle = document.getElementById('store-status-toggle'); if(isPrivacyMode) { storeToggle.checked = false; storeToggle.disabled = true; } else { storeToggle.disabled = false; } toggleStoreStatus(); }
     function toggleStoreStatus() { isStoreOpen = document.getElementById('store-status-toggle').checked; const title = document.getElementById('boss-status-title'); const bg = document.getElementById('boss-status-bg'); if(isStoreOpen) { title.innerText = "매장 영업 중"; bg.className = "bg-blue-50 p-5 rounded-2xl border border-blue-100 mb-2 flex justify-between items-center transition-colors"; } else { title.innerText = "영업 종료"; bg.className = "bg-red-50 p-5 rounded-2xl border border-red-100 mb-2 flex justify-between items-center transition-colors"; } }
     
@@ -996,6 +1080,7 @@
     
     // 안전하게 초기화 함수 실행 (어떤 환경이든 무조건 실행되도록)
     function initApp() {
+        loadBossInfo();
         updateBadge(); 
         renderMapMarkers(); 
 
