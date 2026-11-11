@@ -143,7 +143,48 @@
             flex-shrink: 0;
             touch-action: manipulation;
         }
-        #view-intro #map-wrapper { transition-duration: 0.8s !important; }
+        /* 자격 확인 후 3초 동안 지도를 부드럽게 확대 */
+        #view-intro #map-wrapper {
+            transition: transform 3000ms ease-in-out;
+            will-change: transform;
+            /* 원본 map.png가 없는 경우에도 확대가 보이는 지도 격자 */
+            background-color: #f0f4f8;
+            background-image: linear-gradient(#cbd5e1 1px, transparent 1px), linear-gradient(90deg, #cbd5e1 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+        #map-matching-status {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: max-content;
+            max-width: calc(100% - 28px);
+            z-index: 25;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            background: rgba(255,255,255,.94);
+            border: 1px solid #bfdbfe;
+            border-radius: 999px;
+            box-shadow: 0 4px 18px rgba(30,64,175,.14);
+            padding: 10px 15px;
+            color: #1d4ed8;
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        #map-matching-status.hidden { display: none !important; }
+        .map-matching-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #bfdbfe;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            flex-shrink: 0;
+            animation: matchingSpin .8s linear infinite;
+        }
+        @keyframes matchingSpin { to { transform: rotate(360deg); } }
+        #btn-check-eligibility:disabled { opacity: .78; cursor: wait; }
         @media (max-height: 620px) {
             #view-intro > .map-bg-fallback { min-height: 70px; }
             #view-intro > .signup-form-panel { padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)); }
@@ -180,11 +221,15 @@
 
         <div id="view-intro" class="fade-in hidden flex-col h-full bg-gray-50 overflow-y-auto">
             <div class="relative w-full h-[450px] sm:h-[550px] flex-shrink-0 map-bg-fallback overflow-hidden border-b-4 border-blue-600 shadow-inner">
-                <div id="map-wrapper" class="w-full h-full transition-transform ease-in-out" style="transition-duration: 5s;">
+                <div id="map-wrapper" class="w-full h-full transition-transform ease-in-out">
                     <img id="gwangju-map" src="./map.png" alt="지도" onerror="this.style.display='none';">
                 </div>
                 <div id="map-focus" class="absolute top-1/2 left-1/2 w-20 h-20 bg-blue-500/30 border-blue-600 rounded-full map-focus-ring hidden"></div>
                 <div id="map-pin" class="absolute top-1/2 left-1/2 w-5 h-5 bg-red-600 border-2 border-white rounded-full shadow-lg transform -translate-x-1/2 -translate-y-1/2 hidden z-10"></div>
+                <div id="map-matching-status" class="hidden" role="status" aria-live="polite">
+                    <span class="map-matching-spinner" aria-hidden="true"></span>
+                    <span id="map-matching-text">상권 매칭 중…</span>
+                </div>
             </div>
             <div class="signup-form-panel p-6 flex flex-col bg-gray-50 flex-shrink-0 relative z-20">
                 <h2 class="text-2xl font-black text-gray-800 mb-2">어디에 거주하시나요?</h2>
@@ -676,7 +721,7 @@
     };
     
     window.startQRSignup = function() {
-        alert("QR 카메라 연동 전 시연 버전입니다. 주소 입력 단계로 이동합니다.");
+        alert("QR 가입을 계속하려면 거주 주소를 먼저 확인해 주세요.");
         window.startAppSignup();
     };
 
@@ -687,65 +732,102 @@
         ['양동',['양동']], ['유촌동',['유촌','버들']], ['마륵동',['마륵']], ['매월동',['매월']]
     ];
     let lastPreviewDong = '';
+    let matchingInProgress = false;
+    let matchingTimer = null;
+    const MATCH_ZOOM_MS = 3000;
     function matchDongFromInput(raw) {
         const value = String(raw || '').replace(/\s+/g, '').trim();
         if (!value) return null;
         const group = areaAliases.find(([, aliases]) => aliases.some(alias => value.includes(alias)));
         return group ? group[0] : null;
     }
+    function resetSignupMap() {
+        const mapWrapper = document.getElementById('map-wrapper');
+        mapWrapper.style.transition = 'none';
+        mapWrapper.style.transform = 'translate(0%, 0%) scale(1)';
+        document.getElementById('map-focus').classList.add('hidden');
+        document.getElementById('map-pin').classList.add('hidden');
+        document.getElementById('map-matching-status').classList.add('hidden');
+    }
     function previewAddressDong() {
+        if (matchingInProgress) return lastPreviewDong;
         const input = document.getElementById('signup-address');
         const hint = document.getElementById('address-match-hint');
         const dong = matchDongFromInput(input.value);
         if (dong) {
             hint.textContent = '✓ ' + dong + ' 인식 완료 · 자격 확인하기를 누르세요.';
             hint.className = 'mt-2 text-xs text-blue-600 font-bold';
-            if (dong !== lastPreviewDong) focusMapByDongName(dong);
         } else {
             hint.textContent = input.value.trim() ? '서구의 동 이름을 확인해 주세요. 예: 농성동, 화정동, 금호동' : "'농성'처럼 동 이름의 일부만 입력해도 인식됩니다.";
             hint.className = 'mt-2 text-xs text-gray-500 font-bold';
-            if (lastPreviewDong) {
-                document.getElementById('map-wrapper').style.transform = '';
-                document.getElementById('map-focus').classList.add('hidden');
-                document.getElementById('map-pin').classList.add('hidden');
-            }
         }
+        if (dong !== lastPreviewDong) resetSignupMap();
         lastPreviewDong = dong || '';
         return dong;
     }
 
-    // 지도 포커스 수학적 계산 적용 (정중앙 이동)
+    // 좌표를 중앙에 두고 3초에 걸쳐 부드럽게 확대
     function focusMapByDongName(dong) {
-        const mapWrapper = document.getElementById('map-wrapper'); const mapFocus = document.getElementById('map-focus'); const mapPin = document.getElementById('map-pin');
-        if(dong && dongCoordinates[dong]) {
-            const coord = dongCoordinates[dong];
-            mapWrapper.style.transformOrigin = `${coord.x}% ${coord.y}%`;
-            // 목표 좌표가 정중앙에 오도록 translate 적용 (100% 기준으로 50% 위치로 이동)
+        const mapWrapper = document.getElementById('map-wrapper');
+        const mapFocus = document.getElementById('map-focus');
+        const mapPin = document.getElementById('map-pin');
+        if (!dongCoordinates[dong]) return;
+        const coord = dongCoordinates[dong];
+        // 이전 검사에서 이미 확대된 지도라도 처음부터 확대가 다시 재생되도록 초기화
+        mapWrapper.style.transition = 'none';
+        mapWrapper.style.transformOrigin = `${coord.x}% ${coord.y}%`;
+        mapWrapper.style.transform = 'translate(0%, 0%) scale(1)';
+        void mapWrapper.offsetWidth; // 시작 상태를 브라우저에 적용
+        mapFocus.classList.add('hidden');
+        mapPin.classList.add('hidden');
+        requestAnimationFrame(() => {
+            mapWrapper.style.transition = `transform ${MATCH_ZOOM_MS}ms ease-in-out`;
             mapWrapper.style.transform = `translate(${50 - coord.x}%, ${50 - coord.y}%) scale(3)`;
-            
-            // 핀과 포커스링은 항상 컨테이너의 50%(정중앙)에 고정
-            mapFocus.style.left = `50%`; mapFocus.style.top = `50%`; mapFocus.classList.remove('hidden');
-            mapPin.style.left = `50%`; mapPin.style.top = `50%`; mapPin.classList.remove('hidden');
-        }
+            mapFocus.style.left = '50%'; mapFocus.style.top = '50%';
+            mapPin.style.left = '50%'; mapPin.style.top = '50%';
+            mapFocus.classList.remove('hidden');
+            mapPin.classList.remove('hidden');
+        });
     }
 
     function checkEligibilityManual() {
-        const addrInput = document.getElementById('signup-address').value.trim();
-        if(!addrInput) return alert("거주 주소를 입력해 주세요.");
+        if (matchingInProgress) return;
+        const input = document.getElementById('signup-address');
+        const addrInput = input.value.trim();
+        if (!addrInput) return alert('거주 주소를 입력해 주세요.');
         const matchedDong = matchDongFromInput(addrInput);
-        if(!matchedDong) {
+        if (!matchedDong) {
             previewAddressDong();
-            return alert("입력하신 주소에서 서구의 동 이름을 찾지 못했습니다. 예: 농성동, 화정동, 금호동");
+            return alert('입력하신 주소에서 서구의 동 이름을 찾지 못했습니다. 예: 농성동, 화정동, 금호동');
         }
-        
-        document.getElementById('signup-address').blur(); // 키보드 내림
-        window.scrollTo(0, 0); // 화면 밀림 굳음 방지
 
+        input.blur();
         user.matchedDong = matchedDong;
+        matchingInProgress = true;
+        input.disabled = true;
+        const button = document.getElementById('btn-check-eligibility');
+        button.disabled = true;
+        button.textContent = '상권 매칭 중…';
+        const status = document.getElementById('map-matching-status');
+        document.getElementById('map-matching-text').textContent = matchedDong + ' 상권 매칭 중…';
+        status.classList.remove('hidden');
+        const hint = document.getElementById('address-match-hint');
+        hint.textContent = matchedDong + ' 위치를 확인하고 있습니다.';
+        hint.className = 'mt-2 text-xs text-blue-600 font-bold';
+        // 지도를 볼 수 있도록 입력 영역의 스크롤 위치도 유지
+        document.getElementById('view-intro').scrollTop = 0;
         focusMapByDongName(matchedDong);
 
-        // 입력 중 지도로 위치를 표시하며, 자격 확인 버튼을 누르면 즉시 다음 단계로 이동합니다.
-        checkEligibilityAuto(addrInput, matchedDong);
+        clearTimeout(matchingTimer);
+        matchingTimer = setTimeout(() => {
+            matchingInProgress = false;
+            input.disabled = false;
+            button.disabled = false;
+            button.textContent = '자격 확인하기';
+            status.classList.add('hidden');
+            matchingTimer = null;
+            checkEligibilityAuto(addrInput, matchedDong);
+        }, MATCH_ZOOM_MS + 150);
     }
 
     function checkEligibilityAuto(addrInput, matchedDong) {
@@ -767,6 +849,14 @@
     }
     
     function cancelSignup() {
+        clearTimeout(matchingTimer);
+        matchingTimer = null;
+        matchingInProgress = false;
+        document.getElementById('signup-address').disabled = false;
+        const matchButton = document.getElementById('btn-check-eligibility');
+        matchButton.disabled = false;
+        matchButton.textContent = '자격 확인하기';
+        resetSignupMap();
         var intro = document.getElementById('view-intro');
         var signup2 = document.getElementById('view-signup-2');
         signup2.style.display = 'none';
@@ -891,7 +981,7 @@
             addr.className = 'text-xs text-gray-500 mt-1';
             addr.textContent = store.addr;
             item.append(name,addr);
-            item.onclick = () => { switchInnerMapTab('around'); showStoreInfo(index); };
+            item.onclick = () => { switchInnerMapTab('around'); showStoreInfo(index, store.name); };
             results.appendChild(item);
         });
     }
@@ -920,13 +1010,16 @@
         });
     }
 
-    function showStoreInfo(index) {
+    function showStoreInfo(index, preferredStoreName) {
         const loc = mapLocations[index];
         const sheet = document.getElementById('store-info-sheet');
         const content = document.getElementById('store-info-content');
+        // 검색으로 선택한 매장은 상세 화면의 맨 위에 표시. 지도 마커 클릭은 기존 순서를 유지.
+        const matchedStore = preferredStoreName ? loc.stores.find(s => s.name === preferredStoreName) : null;
+        const visibleStores = matchedStore ? [matchedStore, ...loc.stores.filter(s => s !== matchedStore)] : loc.stores;
         
         let html = '';
-        loc.stores.forEach((store, i) => {
+        visibleStores.forEach((store, i) => {
             let heartIcon = store.isFav ?
                 `<span class="material-symbols-outlined text-[#E55B2D]" style="font-variation-settings: 'FILL' 1;">favorite</span>` :
                 `<span class="material-symbols-outlined text-gray-300">favorite</span>`;
